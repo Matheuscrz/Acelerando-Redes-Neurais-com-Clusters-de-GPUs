@@ -1,7 +1,12 @@
-# Projeto de Paralelização e Distribuição do Treinamento de Redes Neurais
+# Identificação de Rochas em Perfurações de Poços de Petróleo com Redes Neurais e CUDA
 
 ## Descrição
-Este repositório contém o trabalho de conclusão de curso (TCC) que se concentra na paralelização e distribuição do treinamento de redes neurais. O projeto utiliza vários clusters com GPUs Nvidia para treinar uma rede neural de forma paralelizada, com o objetivo de reduzir o tempo de treinamento e otimizar o processo.
+Este repositório contém a implementação e documentação do Trabalho de Conclusão de Curso (TCC) que desenvolve uma rede neural profunda utilizando autoencoders para identificar rochas durante a perfuração de poços de petróleo. O foco principal é otimizar o desempenho do treinamento utilizando núcleos CUDA de GPU e distribuir o treinamento em clusters de GPUs.
 
-## Objetivo
-O objetivo deste projeto é analisar dados de 11 sensores que geram o perfil composto das perfurações de petróleo. A rede neural será treinada para identificar o material através desses dados, treinando de material a material.
+## Tecnologias Utilizadas
+- **Python**
+- **PyTorch**
+- **CUDA**
+- **Clusters de GPUs**
+- **SGBDs** (Sistemas de Gerenciamento de Banco de Dados)
+- **Memcached** (opcional)
