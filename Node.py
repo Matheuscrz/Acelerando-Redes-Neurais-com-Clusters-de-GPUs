@@ -1,6 +1,6 @@
 import torch
 import torch.distributed as dist
-from torch.multiprocessing import Process
+import torch.multiprocessing as mp
 
 def run(rank, size):
     tensor = torch.zeros(1)
