@@ -1,0 +1,46 @@
+# Usar a imagem base do CUDA mais recente
+FROM nvidia/cuda:latest
+
+# Atualizar e instalar dependências necessárias
+RUN apt update && apt upgrade -y && \
+    apt install -y \
+    git \
+    wget \
+    curl \
+    ca-certificates \
+    libjpeg-dev \
+    libpng-dev && \
+    rm -rf /var/lib/apt/lists/*
+
+# Baixar e instalar Miniconda
+RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh && \
+    /bin/bash ~/miniconda.sh -b -p /opt/conda && \
+    rm ~/miniconda.sh
+
+# Adicionar Conda ao PATH
+ENV PATH /opt/conda/bin:$PATH
+
+# Criar e ativar o ambiente Conda
+RUN conda create -n TCC python=3.9 -y && \
+    conda init bash && \
+    echo "conda activate TCC" >> ~/.bashrc
+
+# Definir o ambiente Conda padrão
+ENV CONDA_DEFAULT_ENV TCC
+ENV PATH /opt/conda/envs/TCC/bin:$PATH
+
+# Instalar PyTorch e outras bibliotecas necessárias
+RUN conda install -n TCC pytorch torchvision torchaudio pytorch-cuda=12.4 -c pytorch -c nvidia -y && \
+    conda clean -afy
+
+# Definir o diretório de trabalho
+WORKDIR /app
+
+# Copiar o conteúdo do diretório atual para o diretório de trabalho no container
+COPY . /app
+
+# Expor a porta 5000
+EXPOSE 5000
+
+# Comando padrão para iniciar o container
+CMD ["bash"]
