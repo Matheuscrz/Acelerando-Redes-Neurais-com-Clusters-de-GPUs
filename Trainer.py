@@ -8,18 +8,9 @@ from torch.utils.data.distributed import DistributedSampler
 from torch.distributed import init_process_group, destroy_process_group
 import os
 
-def ddp_setup(rank, world_size):
-    """
-    Args:
-        rank: Identificador do processo atual
-        world_size: Número total de processos
-    """
-
-    os.environ['MASTER_ADDR'] = 'localhost'
-    os.environ['MASTER_PORT'] = '12355'
-
-    # Inicializa o grupo de processos
-    init_process_group(backend='nccl', rank=rank, world_size=world_size) #gloo para CPU
+def ddp_setup():
+        # Inicializa o grupo de processos
+    init_process_group(backend='nccl') #gloo para CPU
 
 
 class Trainer:
@@ -28,8 +19,8 @@ class Trainer:
             model: torch.nn.Module,
             train_data: DataLoader,
             optimizer: torch.optim.Optimizer,
-            gpu_id: int,
             save_every: int,
+            snapshot_path: str,
     ) -> None:
         """
         Inicializa a classe Trainer.
@@ -41,12 +32,22 @@ class Trainer:
             gpu_id: ID da GPU a ser usada para treinamento
             save_every: Intervalo de salvamento do modelo em checkpoints
         """
-        self.gpu_id = gpu_id
-        self.model = model.to(gpu_id)
+        self.gpu_id = int(os.environ.get("LOCAL_RANK")) 
+        self.model = model.to(self.gpu_id)
         self.train_data = train_data
         self.optimizer = optimizer
         self.save_every = save_every
+        self.epochs_run = 0
+        if os.path.exists(snapshot_path):
+            print(f"Carregando snapshot de {snapshot_path}")
+            self._load_snapshot(snapshot_path)
         self.model = DDP(self.model, device_ids=[self.gpu_id])
+
+    def _load_snapshot(self, snapshot_path):
+            snapshot = torch.load(snapshot_path)
+            self.model.load_state_dict(snapshot["MODEL_STATE"])
+            self.epochs_run = snapshot["EPOCHS_RUN"]
+            print(f"Snapshot carregado de {snapshot_path} com {self.epochs_run} épocas treinadas")
     
     def _run_batch(self, source, targets):
         """
@@ -76,16 +77,18 @@ class Trainer:
             targets = targets.to(self.gpu_id) # Move os rótulos para a GPU
             self._run_batch(source, targets) # Executa uma etapa de treinamento
 
-    def _save_checkpoint(self, epoch):
+    def _save_snapshot(self, epoch):
         """
         Salva um checkpoint do modelo treinado.
         
         Args:
             epoch: O número da época atual
         """
-        ckp = self.model.module.state_dict() # Salva o estado do modelo
-        torch.save(ckp, f"checkpoint_{epoch}.pt") # Salva o checkpoint
-        print(f"Epoch {epoch} | Training checkpoint saved at checkpoint_{epoch}.pt")
+        snapshot = {}
+        snapshot["MODEL_STATE"] = self.model.state_dict()
+        snapshot["EPOCHS_RUN"] = epoch
+        torch.save(snapshot, f"snapshot{epoch}.pt") # Salva o checkpoint
+        print(f"Epoch {epoch} | Training checkpoint saved at snapshot{epoch}.pt")
 
     def train(self, max_epochs: int):
         """
@@ -94,10 +97,10 @@ class Trainer:
         Args:
             max_epochs: Número total de épocas para treinar o modelo
         """
-        for epoch in range(max_epochs): # Itera sobre as épocas
+        for epoch in range(self.epochs_run, max_epochs): # Itera sobre as épocas
             self._run_epoch(epoch) # Executa uma época de treinamento
             if self.gpu_id == 0 and epoch % self.save_every == 0: # Salva o modelo a cada 'save_every' épocas
-                self._save_checkpoint(epoch)
+                self._save_snapshot(epoch)
     
     def load_train_objs():
         """
