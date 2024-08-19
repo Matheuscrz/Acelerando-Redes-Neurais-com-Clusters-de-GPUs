@@ -87,8 +87,8 @@ class Trainer:
         snapshot = {}
         snapshot["MODEL_STATE"] = self.model.state_dict()
         snapshot["EPOCHS_RUN"] = epoch
-        torch.save(snapshot, f"snapshot{epoch}.pt") # Salva o checkpoint
-        print(f"Epoch {epoch} | Training checkpoint saved at snapshot{epoch}.pt")
+        torch.save(snapshot, f"snapshot.pt") # Salva o checkpoint
+        print(f"Epoch {epoch} | Ponto de verificação de treinamento salvo em snapshot.pt")
 
     def train(self, max_epochs: int):
         """
@@ -132,7 +132,7 @@ class Trainer:
             sampler=DistributedSampler(dataset), # Usa um sampler distribuído
         )
     
-    def main(rank: int, world_size: int, total_epochs: int, save_every: int):
+    def main(total_epochs: int, save_every: int, snapshot_path: str = "snapshot.pt"):
         """
         Função principal para treinamento distribuído.
         
@@ -142,10 +142,10 @@ class Trainer:
             total_epochs: Número total de épocas para treinar o modelo
             save_every: Intervalo de salvamento do modelo em checkpoints
         """
-        ddp_setup(rank, world_size) # Configura o treinamento distribuído
+        ddp_setup() # Configura o treinamento distribuído
         train_set, model, optimizer = load_train_objs() # Carrega os objetos necessários para treinamento
         train_data = prepare_dataloader(train_set, batch_size=32) # Prepara o DataLoader para o conjunto de dados
-        trainer = Trainer(model, train_data, optimizer, rank, save_every) # Inicializa o treinador
+        trainer = Trainer(model, train_data, optimizer, save_every, snapshot_path) # Inicializa o treinador
         trainer.train(total_epochs) # Treina o modelo
         destroy_process_group() # Finaliza o grupo de processos
 
@@ -160,5 +160,4 @@ class Trainer:
         import sys
         total_epochs = int(sys.argv[1]) # Número total de épocas para treinar o modelo
         save_every = int(sys.argv[2]) # Intervalo de salvamento do modelo em checkpoints
-        world_size = torch.cuda.device_count() # Número total de GPUs disponíveis
-        mp.spawn(main, args=(world_size, total_epochs, save_every), nprocs=world_size, join=True) # Inicia o treinamento distribuído
+        main (total_epochs, save_every) # Inicia o treinamento distribuído
